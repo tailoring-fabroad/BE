@@ -11,7 +11,7 @@ from src.app.core.events import create_start_app_handler, create_stop_app_handle
 from src.authentication.router import router as authentication_router
 # from src.users import router as users_router
 # from src.profiles import router as profiles_router
-# from src.articles import router as articles_router
+from src.articles.router import router as articles_router
 # from src.comments import router as comments_router
 # from src.tags import router as tags_router
 
@@ -48,7 +48,7 @@ def get_application() -> FastAPI:
     router.include_router(authentication_router, tags=["authentication"], prefix="/auth")
     # router.include_router(users_router, tags=["users"], prefix="/users")
     # router.include_router(profiles_router, tags=["profiles"], prefix="/profiles")
-    # router.include_router(articles_router, tags=["articles"], prefix="/articles")
+    router.include_router(articles_router, tags=["articles"], prefix="/articles")
     # router.include_router(comments_router, tags=["comments"], prefix="/articles/{slug}/comments")
     # router.include_router(tags_router, tags=["tags"], prefix="/tags")
 
