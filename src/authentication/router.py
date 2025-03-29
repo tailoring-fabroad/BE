@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Body, Depends, HTTPException
-from starlette.status import HTTP_201_CREATED, HTTP_400_BAD_REQUEST
+from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_400_BAD_REQUEST
 
 from src.app.database.database import get_repository
 from src.app.core.config import get_app_settings
@@ -12,21 +12,29 @@ from src.authentication.schema import (
     UserInResponse,
     UserWithToken,
 )
-# from src.authentication.constants import constants
 from src.authentication import service
-from src.authentication.service import check_email_is_taken, check_username_is_taken
+from src.authentication.service import (
+    check_email_is_taken,
+    check_username_is_taken,
+)
+from src.utils.responses.http_success import response_success
+from src.utils.responses.schema import ResponseModel
 
 router = APIRouter()
 
-@router.post("/login", response_model=UserInResponse, name="auth:login")
+@router.post(
+        "/login", 
+        name="auth:login",
+        response_model=ResponseModel[UserInResponse],
+        )
 async def login(
     user_login: UserInLogin = Body(...),
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
     settings: AppSettings = Depends(get_app_settings),
-) -> UserInResponse:
+):
     wrong_login_error = HTTPException(
         status_code=HTTP_400_BAD_REQUEST,
-        detail="incorrect email or password",
+        detail="Incorrect email or password",
     )
 
     try:
@@ -41,37 +49,42 @@ async def login(
         user,
         str(settings.secret_key.get_secret_value()),
     )
-    return UserInResponse(
-        user=UserWithToken(
-            username=user.username,
-            email=user.email,
-            bio=user.bio,
-            image=user.image,
-            token=token,
-        ),
+
+    user_with_token = UserWithToken(
+        username=user.username,
+        email=user.email,
+        bio=user.bio,
+        image=user.image,
+        token=token,
+    )
+
+    return response_success(
+        status_code=HTTP_200_OK,
+        message="Login Success",
+        data=UserInResponse(user=user_with_token).dict(),
     )
 
 @router.post(
-    "",
-    status_code=HTTP_201_CREATED,
-    response_model=UserInResponse,
-    name="auth:register",
-)
+        "/register", 
+        status_code=HTTP_201_CREATED, 
+        name="auth:register",        
+        response_model=ResponseModel[UserInResponse],
+        )
 async def register(
     user_create: UserInCreate = Body(...),
     users_repo: UsersRepository = Depends(get_repository(UsersRepository)),
     settings: AppSettings = Depends(get_app_settings),
-) -> UserInResponse:
+):
     if await check_username_is_taken(users_repo, user_create.username):
         raise HTTPException(
             status_code=HTTP_400_BAD_REQUEST,
-            detail="user with this username already exists",
+            detail="User with this username already exists",
         )
 
     if await check_email_is_taken(users_repo, user_create.email):
         raise HTTPException(
             status_code=HTTP_400_BAD_REQUEST,
-            detail="user with this email already exists",
+            detail="User with this email already exists",
         )
 
     user = await users_repo.create_user(**user_create.dict())
@@ -80,12 +93,17 @@ async def register(
         user,
         str(settings.secret_key.get_secret_value()),
     )
-    return UserInResponse(
-        user=UserWithToken(
-            username=user.username,
-            email=user.email,
-            bio=user.bio,
-            image=user.image,
-            token=token,
-        ),
+
+    user_with_token = UserWithToken(
+        username=user.username,
+        email=user.email,
+        bio=user.bio,
+        image=user.image,
+        token=token,
+    )
+
+    return response_success(
+        status_code=HTTP_201_CREATED,
+        message="Register Success",
+        data=UserInResponse(user=user_with_token).dict(),
     )
